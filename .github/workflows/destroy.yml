@@ -1,0 +1,52 @@
+# ============================================================
+# .github/workflows/destroy.yml
+# Manual destroy — DEV ONLY, requires explicit confirmation
+# ============================================================
+
+name: Destroy Infrastructure (Dev Only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to destroy (dev only allowed)'
+        required: true
+        type: choice
+        options: [dev]
+      confirm:
+        description: 'Type DESTROY to confirm'
+        required: true
+
+env:
+  ARM_CLIENT_ID:       ${{ secrets.ARM_CLIENT_ID }}
+  ARM_CLIENT_SECRET:   ${{ secrets.ARM_CLIENT_SECRET }}
+  ARM_TENANT_ID:       ${{ secrets.ARM_TENANT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+  TF_VERSION:          "1.6.4"
+
+jobs:
+  destroy:
+    name: Destroy / ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    if: inputs.confirm == 'DESTROY' && inputs.environment == 'dev'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: |
+          cd terraform/environments/${{ inputs.environment }}
+          terraform init
+
+      - name: Terraform Destroy
+        run: |
+          cd terraform/environments/${{ inputs.environment }}
+          terraform destroy \
+            -auto-approve \
+            -var="subscription_id=${{ secrets.ARM_SUBSCRIPTION_ID }}" \
+            -var="databricks_account_id=${{ secrets.DATABRICKS_ACCOUNT_ID }}"

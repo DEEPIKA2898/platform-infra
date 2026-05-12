@@ -1,0 +1,280 @@
+# ============================================================
+# .github/workflows/infra.yml
+# ⚠️  PARAMS TO UPDATE:
+#   Line ~110: repo: 'data-pipelines' → your DABs repo name
+#              OR comment out the "Trigger DABs pipeline" step
+#              if you don't have a DABs repo yet
+# ============================================================
+
+name: Infrastructure Pipeline
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/infra.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'terraform/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options: [dev, staging, prod]
+
+env:
+  ARM_CLIENT_ID:       ${{ secrets.ARM_CLIENT_ID }}
+  ARM_CLIENT_SECRET:   ${{ secrets.ARM_CLIENT_SECRET }}
+  ARM_TENANT_ID:       ${{ secrets.ARM_TENANT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+  TF_VERSION:          "1.6.4"
+
+jobs:
+  # ── 1. Validate ─────────────────────────────────────────────
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform format check
+        run: terraform fmt -check -recursive terraform/
+
+      - name: Validate dev config
+        run: |
+          cd terraform/environments/dev
+          terraform init -backend=false
+          terraform validate
+
+  # ── 2. Security Scan ────────────────────────────────────────
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: validate
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: tfsec
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: terraform/
+          soft_fail: true     # set to false to block on security issues
+
+      - name: checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: terraform/
+          framework: terraform
+          soft_fail: true     # set to false to block on compliance issues
+
+  # ── 3. Plan ─────────────────────────────────────────────────
+  plan:
+    name: Plan / ${{ matrix.env }}
+    runs-on: ubuntu-latest
+    needs: security
+    strategy:
+      matrix:
+        env: [dev]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: |
+          cd terraform/environments/${{ matrix.env }}
+          terraform init
+
+      - name: Terraform Plan
+        id: plan
+        run: |
+          cd terraform/environments/${{ matrix.env }}
+          terraform plan \
+            -out=tfplan.bin \
+            -detailed-exitcode \
+            -var="subscription_id=${{ secrets.ARM_SUBSCRIPTION_ID }}" \
+            -var="databricks_account_id=${{ secrets.DATABRICKS_ACCOUNT_ID }}"
+        continue-on-error: true
+
+      - name: Upload plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ matrix.env }}
+          path: terraform/environments/${{ matrix.env }}/tfplan.bin
+          retention-days: 3
+
+      - name: Comment plan on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const exitcode = '${{ steps.plan.outputs.exitcode }}';
+            const env = '${{ matrix.env }}';
+            const icon = exitcode === '0' ? '✅' : exitcode === '2' ? '⚠️' : '❌';
+            const msg  = exitcode === '0' ? 'No changes'
+                       : exitcode === '2' ? 'Changes pending — review before merge'
+                       : 'Plan failed — fix before merging';
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `### ${icon} Terraform Plan — \`${env}\`\n**Status:** ${msg}`
+            });
+
+  # ── 4. Apply Dev (auto on merge to main) ────────────────────
+  apply_dev:
+    name: Apply / dev
+    runs-on: ubuntu-latest
+    needs: plan
+    if: github.ref == 'refs/heads/main'
+    environment: dev
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Download plan
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-dev
+          path: terraform/environments/dev
+
+      - name: Terraform Init
+        run: cd terraform/environments/dev && terraform init
+
+      - name: Terraform Apply
+        run: cd terraform/environments/dev && terraform apply -auto-approve tfplan.bin
+
+      - name: Export outputs to Key Vault
+        run: |
+          cd terraform/environments/dev
+          terraform output -json > /tmp/tf-outputs-dev.json
+
+          az login \
+            --service-principal \
+            -u ${{ secrets.ARM_CLIENT_ID }} \
+            -p ${{ secrets.ARM_CLIENT_SECRET }} \
+            --tenant ${{ secrets.ARM_TENANT_ID }}
+
+          az keyvault secret set \
+            --vault-name "${{ vars.KV_NAME_DEV }}" \
+            --name "tf-outputs" \
+            --file /tmp/tf-outputs-dev.json
+
+      # ⚠️ UPDATE: change 'data-pipelines' to your DABs repo name
+      # ⚠️ OR comment out this entire step if you don't have a DABs repo yet
+      # - name: Trigger DABs pipeline
+      #   uses: actions/github-script@v7
+      #   with:
+      #     github-token: ${{ secrets.DABS_DISPATCH_TOKEN }}
+      #     script: |
+      #       await github.rest.repos.createDispatchEvent({
+      #         owner: context.repo.owner,
+      #         repo: 'data-pipelines',        // ← UPDATE or remove this step
+      #         event_type: 'infra-updated',
+      #         client_payload: { environment: 'dev' }
+      #       });
+
+  # # ── 5. Apply Staging (manual approval) ──────────────────────
+  # apply_staging:
+  #   name: Apply / staging
+  #   runs-on: ubuntu-latest
+  #   needs: apply_dev
+  #   environment: staging
+
+  #   steps:
+  #     - uses: actions/checkout@v4
+
+  #     - name: Setup Terraform
+  #       uses: hashicorp/setup-terraform@v3
+  #       with:
+  #         terraform_version: ${{ env.TF_VERSION }}
+
+  #     - name: Download plan
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: tfplan-staging
+  #         path: terraform/environments/staging
+
+  #     - name: Terraform Init
+  #       run: cd terraform/environments/staging && terraform init
+
+  #     - name: Terraform Apply
+  #       run: cd terraform/environments/staging && terraform apply -auto-approve tfplan.bin
+
+  #     - name: Export outputs to Key Vault
+  #       run: |
+  #         cd terraform/environments/staging
+  #         terraform output -json > /tmp/tf-outputs-staging.json
+  #         az login \
+  #           --service-principal \
+  #           -u ${{ secrets.ARM_CLIENT_ID }} \
+  #           -p ${{ secrets.ARM_CLIENT_SECRET }} \
+  #           --tenant ${{ secrets.ARM_TENANT_ID }}
+  #         az keyvault secret set \
+  #           --vault-name "${{ vars.KV_NAME_STAGING }}" \
+  #           --name "tf-outputs" \
+  #           --file /tmp/tf-outputs-staging.json
+
+  # # ── 6. Apply Prod (2 approvers required) ─────────────────────
+  # apply_prod:
+  #   name: Apply / production
+  #   runs-on: ubuntu-latest
+  #   needs: apply_staging
+  #   environment: production
+
+  #   steps:
+  #     - uses: actions/checkout@v4
+
+  #     - name: Setup Terraform
+  #       uses: hashicorp/setup-terraform@v3
+  #       with:
+  #         terraform_version: ${{ env.TF_VERSION }}
+
+  #     - name: Download plan
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: tfplan-prod
+  #         path: terraform/environments/prod
+
+  #     - name: Terraform Init
+  #       run: cd terraform/environments/prod && terraform init
+
+  #     - name: Terraform Apply
+  #       run: cd terraform/environments/prod && terraform apply -auto-approve tfplan.bin
+
+  #     - name: Export outputs to Key Vault
+  #       run: |
+  #         cd terraform/environments/prod
+  #         terraform output -json > /tmp/tf-outputs-prod.json
+  #         az login \
+  #           --service-principal \
+  #           -u ${{ secrets.ARM_CLIENT_ID }} \
+  #           -p ${{ secrets.ARM_CLIENT_SECRET }} \
+  #           --tenant ${{ secrets.ARM_TENANT_ID }}
+  #         az keyvault secret set \
+  #           --vault-name "${{ vars.KV_NAME_PROD }}" \
+  #           --name "tf-outputs" \
+  #           --file /tmp/tf-outputs-prod.json
+
+  #     - name: Deployment summary
+  #       run: |
+  #         echo "## ✅ Production Deployment Complete" >> $GITHUB_STEP_SUMMARY
+  #         echo "All environments deployed successfully." >> $GITHUB_STEP_SUMMARY

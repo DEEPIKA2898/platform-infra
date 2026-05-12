@@ -30,3 +30,5 @@ scripts/
 2. Add GitHub secrets (see docs)
 3. Push to a feature branch → opens PR with plan
 4. Merge to main → auto-deploys dev, gates on staging/prod
+
+

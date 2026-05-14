@@ -6,9 +6,9 @@
 
 name: Drift Detection
 
-on:
-  schedule:
-    - cron: '0 6 * * *'   # Every day at 06:00 UTC
+# on:
+#   schedule:
+#     - cron: '0 6 * * *'   # Every day at 06:00 UTC
   workflow_dispatch:
 
 env:

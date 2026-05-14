@@ -62,7 +62,7 @@ resource "databricks_cluster" "shared" {
     }
   }
 
-  custom_tags =  {
+  custom_tags = {
     "team" = "platform"
   }
 }

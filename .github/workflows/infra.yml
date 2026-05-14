@@ -101,7 +101,10 @@ jobs:
             -out=tfplan.bin \
             -detailed-exitcode \
             -var="subscription_id=${{ secrets.ARM_SUBSCRIPTION_ID }}" \
-            -var="databricks_account_id=${{ secrets.DATABRICKS_ACCOUNT_ID }}"
+            -var="databricks_account_id=${{ secrets.DATABRICKS_ACCOUNT_ID }}" \
+            -var="tenant_id=${{ secrets.ARM_TENANT_ID }}" \
+            -var="client_id=${{ secrets.ARM_CLIENT_ID }}" \
+            -var="client_secret=${{ secrets.ARM_CLIENT_SECRET }}"
         continue-on-error: true
 
       - name: Upload plan artifact

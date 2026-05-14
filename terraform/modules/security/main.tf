@@ -16,7 +16,7 @@ data "azurerm_client_config" "current" {}
 
 # ── Key Vault ────────────────────────────────────────────────
 resource "azurerm_key_vault" "this" {
-  name                       = "kv-platform-${var.environment}-001"
+  name                       = "kv-dbx-${var.environment}-001"
   location                   = var.location
   resource_group_name        = var.resource_group_name
   tenant_id                  = var.tenant_id

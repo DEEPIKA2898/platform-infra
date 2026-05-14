@@ -30,3 +30,23 @@ variable "admin_group_name" {
   type        = string
   default     = "platform-admins"
 }
+
+variable "node_type" {
+  type    = string
+  default = "Standard_D4s_v3"
+}
+
+variable "tenant_id" {
+  type      = string
+  sensitive = true
+}
+
+variable "client_id" {
+  type      = string
+  sensitive = true
+}
+
+variable "client_secret" {
+  type      = string
+  sensitive = true
+}

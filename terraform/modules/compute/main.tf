@@ -62,8 +62,7 @@ resource "databricks_cluster" "shared" {
     }
   }
 
-  custom_tags = merge(var.tags, {
-    ManagedBy   = "terraform"
-    Environment = var.environment
-  })
+  custom_tags =  {
+    "team" = "platform"
+  }
 }

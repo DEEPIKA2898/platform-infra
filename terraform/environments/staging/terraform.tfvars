@@ -7,8 +7,8 @@
 # ============================================================
 
 environment      = "staging"
-location         = "swedencentral"    # ← UPDATE if using different region (e.g. westeurope)
-admin_group_name = "platform-admins"  # ← UPDATE to your Databricks admin group name
+location         = "swedencentral"   # ← UPDATE if using different region (e.g. westeurope)
+admin_group_name = "platform-admins" # ← UPDATE to your Databricks admin group name
 
 # subscription_id and databricks_account_id are passed
 # via GitHub Actions secrets — never hardcode here

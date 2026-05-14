@@ -22,9 +22,9 @@ terraform {
   }
 
   backend "azurerm" {
-    resource_group_name  = "rg-platform-tfstate"     # ← UPDATE if different
-    storage_account_name = "stplatformtfstate012"    # ← UPDATE to your storage account name
-    container_name       = "tfstate"                 # ← UPDATE if different
+    resource_group_name  = "rg-platform-tfstate"  # ← UPDATE if different
+    storage_account_name = "stplatformtfstate012" # ← UPDATE to your storage account name
+    container_name       = "tfstate"              # ← UPDATE if different
     key                  = "dev/terraform.tfstate"
   }
 }

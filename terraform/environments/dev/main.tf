@@ -6,7 +6,7 @@
 # ============================================================
 
 locals {
-  env  = var.environment
+  env = var.environment
   tags = {
     Environment = var.environment
     ManagedBy   = "terraform"
@@ -40,7 +40,7 @@ module "networking" {
 module "workspace" {
   source = "../../modules/workspace"
 
-  workspace_name       = "dbx-${local.env}-001"   # ← UPDATE name if preferred
+  workspace_name       = "dbx-${local.env}-001" # ← UPDATE name if preferred
   resource_group_name  = azurerm_resource_group.workspace.name
   location             = var.location
   sku                  = "premium"
@@ -51,7 +51,7 @@ module "workspace" {
   private_nsg_assoc_id = module.networking.private_nsg_association_id
   tags                 = local.tags
   log_analytics_id     = ""
-  depends_on = [module.networking]
+  depends_on           = [module.networking]
 }
 
 # ── 3. Unity Catalog ─────────────────────────────────────────
@@ -86,7 +86,7 @@ module "security" {
   tenant_id           = data.azurerm_client_config.current.tenant_id
   tags                = local.tags
   key_vault_sku       = "standard"
-  depends_on = [module.workspace]
+  depends_on          = [module.workspace]
 }
 
 # ── 5. Compute ───────────────────────────────────────────────
@@ -97,11 +97,11 @@ module "compute" {
     databricks.workspace = databricks.workspace
   }
 
-  environment = local.env
-  max_workers = 2             # ← Keep at 2 for demo (cost saving)
-  min_workers = 1
-  node_type   = "Standard_DS3_v2"
-  tags        = local.tags
+  environment   = local.env
+  max_workers   = 2 # ← Keep at 2 for demo (cost saving)
+  min_workers   = 1
+  node_type     = "Standard_DS3_v2"
+  tags          = local.tags
   spark_version = "14.3.x-scala2.12"
 
   depends_on = [module.workspace]

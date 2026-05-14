@@ -6,7 +6,7 @@
 # ============================================================
 
 locals {
-  env  = var.environment
+  env = var.environment
   tags = {
     Environment = var.environment
     ManagedBy   = "terraform"
@@ -40,7 +40,7 @@ module "networking" {
 module "workspace" {
   source = "../../modules/workspace"
 
-  workspace_name       = "dbx-staging-001"   # ← UPDATE name if preferred
+  workspace_name       = "dbx-staging-001" # ← UPDATE name if preferred
   resource_group_name  = azurerm_resource_group.workspace.name
   location             = var.location
   sku                  = "premium"
@@ -98,7 +98,7 @@ module "compute" {
   }
 
   environment = local.env
-  max_workers = 2             # ← Keep at 2 for demo (cost saving)
+  max_workers = 2 # ← Keep at 2 for demo (cost saving)
   min_workers = 1
   node_type   = "Standard_DS3_v2"
   tags        = local.tags

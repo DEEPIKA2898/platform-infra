@@ -14,7 +14,7 @@ variable "min_workers" {
 
 variable "node_type" {
   type    = string
-  default = "Standard_DS3_v2"
+  default = "Standard_D4s_v3"
 }
 
 variable "spark_version" {

@@ -158,7 +158,15 @@ jobs:
         run: cd terraform/environments/dev && terraform init
 
       - name: Terraform Apply
-        run: cd terraform/environments/dev && terraform apply -auto-approve tfplan.bin
+        run: cd terraform/environments/dev && terraform apply -auto-approve tfplan.bin \
+          -var="subscription_id=${{ secrets.ARM_SUBSCRIPTION_ID }}" \
+          -var="databricks_account_id=${{ secrets.DATABRICKS_ACCOUNT_ID }}" \
+          -var="tenant_id=${{ secrets.ARM_TENANT_ID }}" \
+          -var="client_id=${{ secrets.ARM_CLIENT_ID }}" \
+          -var="client_secret=${{ secrets.ARM_CLIENT_SECRET }}"
+          
+          
+          
 
       - name: Export outputs to Key Vault
         run: |

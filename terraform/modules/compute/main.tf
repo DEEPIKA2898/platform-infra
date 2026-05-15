@@ -26,9 +26,6 @@ resource "databricks_instance_pool" "job_pool" {
     spot_bid_max_price = 100
   }
 
-  custom_tags = merge(var.tags, {
-    ManagedBy = "terraform"
-  })
 }
 
 # ── Shared Interactive Cluster ───────────────────────────────
@@ -62,7 +59,4 @@ resource "databricks_cluster" "shared" {
     }
   }
 
-  custom_tags = {
-    "team" = "platform"
-  }
 }

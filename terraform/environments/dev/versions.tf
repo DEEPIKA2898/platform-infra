@@ -1,6 +1,5 @@
 # ============================================================
 # environments/dev/versions.tf
-# ⚠️  UPDATE: storage_account_name → your actual storage account name
 # ============================================================
 
 terraform {
@@ -22,9 +21,9 @@ terraform {
   }
 
   backend "azurerm" {
-    resource_group_name  = "rg-platform-tfstate"  # ← UPDATE if different
-    storage_account_name = "stplatformtfstate012" # ← UPDATE to your storage account name
-    container_name       = "tfstate"              # ← UPDATE if different
+    resource_group_name  = "rg-platform-tfstate"
+    storage_account_name = "stplatformtfstate012"  # ← your storage account
+    container_name       = "tfstate"
     key                  = "dev/terraform.tfstate"
   }
 }
@@ -41,14 +40,21 @@ provider "azurerm" {
   subscription_id = var.subscription_id
 }
 
-# Databricks account-level provider (for Unity Catalog metastore)
+# ── Databricks ACCOUNT-level provider ───────────────────────
+# Used for Unity Catalog metastore (account admin level)
+# Needs Azure SP credentials to authenticate at account level
 provider "databricks" {
-  alias      = "account"
-  host       = "https://accounts.azuredatabricks.net"
-  account_id = var.databricks_account_id
+  alias               = "account"
+  host                = "https://accounts.azuredatabricks.net"
+  account_id          = var.databricks_account_id
+  azure_tenant_id     = var.tenant_id      # ← moved here from workspace
+  azure_client_id     = var.client_id      # ← moved here from workspace
+  azure_client_secret = var.client_secret  # ← moved here from workspace
 }
 
-# Databricks workspace-level provider (populated after workspace is created)
+# ── Databricks WORKSPACE-level provider ─────────────────────
+# Used for everything inside the workspace (clusters, schemas etc)
+# Authenticates automatically via Azure resource ID — no SP creds needed here
 provider "databricks" {
   alias                       = "workspace"
   host                        = module.workspace.workspace_url

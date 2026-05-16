@@ -59,4 +59,7 @@ resource "databricks_cluster" "shared" {
     }
   }
 
+  timeouts {
+    create = "30m"  
+  }
 }

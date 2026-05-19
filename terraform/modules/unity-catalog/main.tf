@@ -16,7 +16,7 @@ data "databricks_current_metastore" "this" {
 resource "databricks_catalog" "this" {
   provider     = databricks.workspace
   name         = var.catalog_name
-  metastore_id = data.databricks_current_metastore.this.metastore_id
+  metastore_id = data.databricks_current_metastore.this.id
   comment      = "Main catalog for ${var.environment} environment"
 }
 

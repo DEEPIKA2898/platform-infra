@@ -100,7 +100,7 @@ module "compute" {
   environment   = local.env
   max_workers   = 2 # ← Keep at 2 for demo (cost saving)
   min_workers   = 1
-  node_type     = "Standard_DS3_v2"
+  node_type     = "Standard_D2s_v3"
   tags          = local.tags
   spark_version = "14.3.x-scala2.12"
 

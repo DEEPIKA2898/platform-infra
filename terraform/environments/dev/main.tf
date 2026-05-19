@@ -68,8 +68,8 @@ module "unity_catalog" {
   environment  = local.env
   catalog_name = local.env
   admin_group  = var.admin_group_name
-
-  depends_on = [module.workspace]
+  storage_root = "abfss://unitycatalog@stdbx001.dfs.core.windows.net/"
+  depends_on   = [module.workspace]
 }
 
 # ── 4. Security ──────────────────────────────────────────────

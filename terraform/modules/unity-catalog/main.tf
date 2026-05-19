@@ -18,6 +18,7 @@ resource "databricks_catalog" "this" {
   name         = var.catalog_name
   metastore_id = data.databricks_current_metastore.this.id
   comment      = "Main catalog for ${var.environment} environment"
+  storage_root = "abfss://unitycatalog@stdbx001.dfs.core.windows.net/"
 }
 
 # Bronze schema

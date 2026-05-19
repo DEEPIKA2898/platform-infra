@@ -33,7 +33,7 @@ variable "admin_group_name" {
 
 variable "node_type" {
   type    = string
-  default = "Standard_D4as_v4"
+  default = "Standard_D2s_v3"
 }
 
 variable "tenant_id" {

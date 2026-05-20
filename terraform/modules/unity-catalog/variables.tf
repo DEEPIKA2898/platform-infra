@@ -18,9 +18,3 @@ variable "catalog_name" {
 variable "admin_group" {
   type = string
 }
-
-variable "storage_root" {
-  type        = string
-  description = "ADLS Gen2 path for catalog managed storage"
-  default     = ""
-}

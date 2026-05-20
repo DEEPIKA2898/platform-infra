@@ -69,7 +69,7 @@ module "unity_catalog" {
   catalog_name = local.env
   admin_group  = var.admin_group_name
 
-  depends_on   = [module.workspace]
+  depends_on = [module.workspace]
 }
 
 # ── 4. Security ──────────────────────────────────────────────
